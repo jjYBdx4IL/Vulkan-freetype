@@ -13,8 +13,8 @@
 #define VK_DESTROY(func, dev, obj) func(dev, obj, NULL), obj = NULL
 #define VK_CHECK(r) do { VkResult res = (r); if (res != VK_SUCCESS) exit(1); } while (0)
 
-#define WIDTH 1920
-#define HEIGHT 1024
+#define WIDTH 1280
+#define HEIGHT 720
 #define MAX_VISIBLE_GLYPHS 4096
 
 #define NUMBER_OF_GLYPHS 96
@@ -80,7 +80,6 @@ typedef struct fd_Render
 
 	GLFWwindow *window;
 	VkInstance instance;
-	VkDebugReportCallbackEXT debug_report_callback;
 	VkPhysicalDevice physical_device;
 	VkPhysicalDeviceMemoryProperties memory_properties;
 	VkPhysicalDeviceProperties device_properties;
@@ -131,8 +130,7 @@ static void load_font(fd_Render *r)
 	FT_CHECK(FT_Init_FreeType(&library));
 
 	FT_Face face;
-	FT_CHECK(FT_New_Face(library, "C:\\windows\\fonts\\times.ttf", 0, &face));
-	//FT_CHECK(FT_New_Face(library, "Korean_Calligraphy.ttf", 0, &face));
+	FT_CHECK(FT_New_Face(library, "NotoSans-Medium.ttf", 0, &face));
 
 	FT_CHECK(FT_Set_Char_Size(face, 0, 1000 * 64, 96, 96));
 
@@ -142,8 +140,6 @@ static void load_font(fd_Render *r)
 	for (uint32_t i = 0; i < NUMBER_OF_GLYPHS; i++)
 	{
 		char c = ' ' + i;
-		printf("%c", c);
-
 		fd_Outline *o = &r->outlines[i];
 		fd_HostGlyphInfo *hgi = &r->glyph_infos[i];
 
@@ -208,41 +204,6 @@ static void load_font(fd_Render *r)
 
 	FT_CHECK(FT_Done_Face(face));
 	FT_CHECK(FT_Done_FreeType(library));
-
-	printf("\n");
-	printf("Avarage glyph size: %d bytes\n", r->glyph_data_size / NUMBER_OF_GLYPHS);
-	printf("    points size: %d bytes\n", r->glyph_points_size / NUMBER_OF_GLYPHS);
-	printf("    cells size: %d bytes\n", r->glyph_cells_size / NUMBER_OF_GLYPHS);
-}
-
-static VkBool32 debug_callback(
-	VkDebugReportFlagsEXT flags,
-	VkDebugReportObjectTypeEXT objType,
-	uint64_t obj,
-	size_t location,
-	int32_t code,
-	const char* layerPrefix,
-	const char* msg,
-	void* userData)
-{
-	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-		printf("validation error:  %s\n", msg);
-	else printf("validation layer: %s\n", msg);
-
-	return VK_FALSE;
-}
-
-static void create_debug_report_callback(fd_Render *r)
-{
-	VkDebugReportCallbackCreateInfoEXT createInfo = { 0 };
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-	createInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)debug_callback;
-
-	PFN_vkCreateDebugReportCallbackEXT func =
-		(PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(r->instance, "vkCreateDebugReportCallbackEXT");
-
-	VK_CHECK(func(r->instance, &createInfo, NULL, &r->debug_report_callback));
 }
 
 static void create_instance(fd_Render *r)
@@ -256,35 +217,18 @@ static void create_instance(fd_Render *r)
 	};
 
 	uint32_t requiredInstanceExtensionCount;
-	const char **requiredInstanceExtensions =
-		glfwGetRequiredInstanceExtensions(&requiredInstanceExtensionCount);
-
-	char *layers[] = { "VK_LAYER_LUNARG_standard_validation" };
-
-	uint32_t extension_count = requiredInstanceExtensionCount + 1;
-	char **extensions = malloc(sizeof(char*) * extension_count);
-	memcpy(extensions, requiredInstanceExtensions, sizeof(char*) * requiredInstanceExtensionCount);
-	extensions[requiredInstanceExtensionCount] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+	const char ** requiredInstanceExtensions = glfwGetRequiredInstanceExtensions(&requiredInstanceExtensionCount);
 
 	VkInstanceCreateInfo instance_info = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = NULL,
 		.flags = 0,
 		.pApplicationInfo = &app_info,
-
-#ifdef DEBUG
-		.enabledLayerCount = 1,
-#else
-		.enabledLayerCount = 0,
-#endif
-
-		.ppEnabledLayerNames = layers,
-		.enabledExtensionCount = extension_count,
-		.ppEnabledExtensionNames = extensions,
+		.enabledExtensionCount = requiredInstanceExtensionCount,
+		.ppEnabledExtensionNames = requiredInstanceExtensions,
 	};
 
 	VK_CHECK(vkCreateInstance(&instance_info, NULL, &r->instance));
-	free(extensions);
 }
 
 static void create_surface(fd_Render *r)
@@ -834,7 +778,7 @@ static void record_current_command_buffer(fd_Render *r)
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &r->instance_buffer, offsets);
 
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
 		r->pipeline_layout, 0, 1, &r->descriptor_set, 0, NULL);
 
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, r->pipeline);
@@ -1341,7 +1285,6 @@ static void create_swap_chain_objects(fd_Render *r)
 static void create_vulkan_objects(fd_Render *r)
 {
 	create_instance(r);
-	create_debug_report_callback(r);
 	create_surface(r);
 	pick_physical_device(r);
 	find_queue_families(r);
@@ -1409,7 +1352,7 @@ static void destroy_swap_chain_objects(fd_Render *r)
 
 static void destroy_vulkan_objects(fd_Render *r)
 {
-	vkDeviceWaitIdle(r->device);
+//	vkDeviceWaitIdle(r->device);
 
 	destroy_swap_chain_objects(r);
 
@@ -1432,12 +1375,6 @@ static void destroy_vulkan_objects(fd_Render *r)
 
 	vkDestroySurfaceKHR(r->instance, r->surface, NULL);
 	r->surface = VK_NULL_HANDLE;
-
-	PFN_vkDestroyDebugReportCallbackEXT func =
-		(PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(r->instance, "vkDestroyDebugReportCallbackEXT");
-
-	func(r->instance, r->debug_report_callback, NULL);
-	r->debug_report_callback = VK_NULL_HANDLE;
 
 	vkDestroyInstance(r->instance, NULL);
 	r->instance = VK_NULL_HANDLE;
@@ -1626,10 +1563,11 @@ int main(int argc, const char **args)
 
 	while (!glfwWindowShouldClose(window))
 	{
-		glfwPollEvents();
-
 		update(&render);
 		render_frame(&render);
+
+		glfwPollEvents();
+//		glfwWaitEvents(); // when debugging
 	}
 
 	destroy_vulkan_objects(&render);
@@ -1637,6 +1575,5 @@ int main(int argc, const char **args)
 	glfwDestroyWindow(window);
 	glfwTerminate();
 
-	system("pause");
 	return 0;
 }
