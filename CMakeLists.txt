@@ -18,7 +18,7 @@ add_executable(glfw_vulkan_test EXCLUDE_FROM_ALL glfw/tests/vulkan.c)
 target_link_libraries(glfw_vulkan_test glfw)
 
 include(FindFreetype)
-add_executable(lorem_ipsum renderer/main.c renderer/geometry.c renderer/outline.c renderer/geometry.h renderer/outline.h renderer/linmath.h)
+add_executable(lorem_ipsum renderer/main.cpp renderer/geometry.cpp renderer/outline.cpp renderer/geometry.h renderer/outline.h renderer/linmath.h)
 target_link_libraries(lorem_ipsum glfw Freetype::Freetype)
 
 

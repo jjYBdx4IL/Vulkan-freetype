@@ -3,12 +3,13 @@
 #include <GLFW/glfw3.h>
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
-#include <float.h>
 #include <math.h>
+
 #include "linmath.h"
 #include "outline.h"
+
+#include <vector>
 
 #define VK_DESTROY(func, dev, obj) func(dev, obj, NULL), obj = NULL
 #define VK_CHECK(r) do { VkResult res = (r); if (res != VK_SUCCESS) exit(1); } while (0)
@@ -96,10 +97,10 @@ typedef struct fd_Render
 	VkExtent2D swapchain_extent;
 	uint32_t image_index;
 	uint32_t image_count;
-	VkImage *images;
-	VkImageView *image_views;
+	std::vector<VkImage> images;
+	std::vector<VkImageView> image_views;
 	VkRenderPass render_pass;
-	VkFramebuffer *framebuffers;
+	std::vector<VkFramebuffer> framebuffers;
 	VkSemaphore image_available_semaphore;
 	VkSemaphore render_finished_semaphore;
 
@@ -110,8 +111,8 @@ typedef struct fd_Render
 	VkDeviceMemory instance_staging_buffer_memory;
 	VkBuffer instance_staging_buffer;
 	VkCommandPool command_pool;
-	VkCommandBuffer *command_buffers;
-	VkFence *command_buffer_fences;
+	std::vector<VkCommandBuffer> command_buffers;
+	std::vector<VkFence> command_buffer_fences;
 	VkDescriptorPool descriptor_pool;
 	VkDescriptorSet descriptor_set;
 	VkDescriptorSetLayout set_layout;
@@ -130,7 +131,11 @@ static void load_font(fd_Render *r)
 	FT_CHECK(FT_Init_FreeType(&library));
 
 	FT_Face face;
-	FT_CHECK(FT_New_Face(library, "NotoSans-Medium.ttf", 0, &face));
+//	FT_CHECK(FT_New_Face(library, "NotoSans-Regular.ttf", 0, &face));
+//	FT_CHECK(FT_New_Face(library, "NotoSans-Medium.ttf", 0, &face));
+//	FT_CHECK(FT_New_Face(library, "NotoSerif-Regular.ttf", 0, &face));
+//	FT_CHECK(FT_New_Face(library, "Lato-Regular.ttf", 0, &face));
+	FT_CHECK(FT_New_Face(library, "Lato-Medium.ttf", 0, &face));
 
 	FT_CHECK(FT_Set_Char_Size(face, 0, 1000 * 64, 96, 96));
 
@@ -239,24 +244,21 @@ static void create_surface(fd_Render *r)
 static void pick_physical_device(fd_Render *r)
 {
 	uint32_t physical_device_count;
-	VkPhysicalDevice *physical_devices;
-
 	VK_CHECK(vkEnumeratePhysicalDevices(r->instance, &physical_device_count, NULL));
 	assert(physical_device_count > 0);
 
-	physical_devices = malloc(sizeof(VkPhysicalDevice) * physical_device_count);
-	VK_CHECK(vkEnumeratePhysicalDevices(r->instance, &physical_device_count, physical_devices));
+	std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
+	VK_CHECK(vkEnumeratePhysicalDevices(r->instance, &physical_device_count, physical_devices.data()));
 
 	r->physical_device = physical_devices[0];
 
 	vkGetPhysicalDeviceMemoryProperties(r->physical_device, &r->memory_properties);
 	vkGetPhysicalDeviceProperties(r->physical_device, &r->device_properties);
-	free(physical_devices);
 }
 
 static void create_device(fd_Render *r)
 {
-	char *extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	char const * extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	VkDeviceCreateInfo device_info = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -314,12 +316,11 @@ static void create_device(fd_Render *r)
 static void find_queue_families(fd_Render *r)
 {
 	uint32_t family_count;
-	VkQueueFamilyProperties *properties;
 
 	vkGetPhysicalDeviceQueueFamilyProperties(r->physical_device, &family_count, NULL);
 
-	properties = malloc(sizeof(VkQueueFamilyProperties) * family_count);
-	vkGetPhysicalDeviceQueueFamilyProperties(r->physical_device, &family_count, properties);
+	std::vector<VkQueueFamilyProperties> properties(family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(r->physical_device, &family_count, properties.data());
 
 	r->graphics_queue_family = UINT32_MAX;
 	r->present_queue_family = UINT32_MAX;
@@ -359,45 +360,38 @@ static void find_queue_families(fd_Render *r)
 			}
 		}
 	}
-
-	free(properties);
 }
 
 static void choose_surface_format(fd_Render *r)
 {
 	uint32_t format_count;
-	VkSurfaceFormatKHR *formats;
-
 	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 		r->physical_device, r->surface, &format_count, NULL));
 
 	assert(format_count > 0);
 
-	formats = malloc(sizeof(VkSurfaceFormatKHR) * format_count);
+	std::vector<VkSurfaceFormatKHR> formats(format_count);
 	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
-		r->physical_device, r->surface, &format_count, formats));
+		r->physical_device, r->surface, &format_count, formats.data()));
 	/*
 	if (format_count == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
 		r->format = VK_FORMAT_B8G8R8A8_UNORM;
 	else r->format = formats[0].format;
 	*/
 	r->format = VK_FORMAT_B8G8R8A8_SRGB;
-	free(formats);
 }
 
 static void choose_present_mode(fd_Render *r)
 {
 	uint32_t present_mode_count;
-	VkPresentModeKHR *present_modes;
-
 	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 		r->physical_device, r->surface, &present_mode_count, NULL));
 
 	assert(present_mode_count > 0);
 
-	present_modes = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
+	std::vector<VkPresentModeKHR>	present_modes(present_mode_count);
 	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
-		r->physical_device, r->surface, &present_mode_count, present_modes));
+		r->physical_device, r->surface, &present_mode_count, present_modes.data()));
 
 
 	for (uint32_t i = 0; i < present_mode_count; i++)
@@ -405,14 +399,12 @@ static void choose_present_mode(fd_Render *r)
 		if (present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
 		{
 			r->present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-			free(present_modes);
 			return;
 		}
 	}
 
 	//r->present_mode = VK_PRESENT_MODE_FIFO_KHR;
 	r->present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-	free(present_modes);
 }
 
 static void create_swap_chain(fd_Render *r)
@@ -487,14 +479,14 @@ static void create_swap_chain(fd_Render *r)
 
 	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, NULL));
 
-	r->images = malloc(sizeof(VkImage) * r->image_count);
-	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, r->images));
+	r->images.resize(r->image_count);
+	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, r->images.data()));
 }
 
 static void create_image_views(fd_Render *r)
 {
-	r->image_views = malloc(sizeof(VkImageView) * r->image_count);
-	memset(r->image_views, 0, sizeof(VkImageView) * r->image_count);
+	r->image_views.resize(r->image_count);
+	memset(r->image_views.data(), 0, sizeof(VkImageView) * r->image_count);
 
 	for (uint32_t i = 0; i < r->image_count; i++)
 	{
@@ -503,7 +495,7 @@ static void create_image_views(fd_Render *r)
 			.image = r->images[i],
 			.viewType = VK_IMAGE_VIEW_TYPE_2D,
 			.format = r->format,
-			.components = { 0 },
+			.components = { },
 			.subresourceRange = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0,
@@ -567,8 +559,8 @@ static void create_render_pass(fd_Render *r)
 
 static void create_framebuffers(fd_Render *r)
 {
-	r->framebuffers = malloc(sizeof(VkFramebuffer) * r->image_count);
-	memset(r->framebuffers, 0, sizeof(VkFramebuffer) * r->image_count);
+	r->framebuffers.resize(r->image_count);
+	memset(r->framebuffers.data(), 0, sizeof(VkFramebuffer) * r->image_count);
 
 	for (uint32_t i = 0; i < r->image_count; i++)
 	{
@@ -609,7 +601,7 @@ static void begin_text(fd_Render *r)
 	uint32_t size = MAX_VISIBLE_GLYPHS * sizeof(fd_GlyphInstance);
 	uint32_t offset = size * r->ring_buffer_index;
 
-	VK_CHECK(vkMapMemory(r->device, r->instance_staging_buffer_memory, offset, size, 0, &r->glyph_instances));
+	VK_CHECK(vkMapMemory(r->device, r->instance_staging_buffer_memory, offset, size, 0, (void **)&r->glyph_instances));
 }
 
 static void end_text(fd_Render *r)
@@ -800,8 +792,8 @@ static void record_command_buffers(fd_Render *r)
 
 static void create_command_buffers(fd_Render *r)
 {
-	r->command_buffers = malloc(sizeof(VkCommandBuffer) * r->ring_buffer_count);
-	memset(r->command_buffers, 0, sizeof(VkCommandBuffer) * r->ring_buffer_count);
+	r->command_buffers.resize(r->ring_buffer_count);
+	memset(r->command_buffers.data(), 0, sizeof(VkCommandBuffer) * r->ring_buffer_count);
 
 	VkCommandBufferAllocateInfo alloc_info = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -810,13 +802,13 @@ static void create_command_buffers(fd_Render *r)
 		.commandBufferCount = r->ring_buffer_count,
 	};
 
-	VK_CHECK(vkAllocateCommandBuffers(r->device, &alloc_info, r->command_buffers));
+	VK_CHECK(vkAllocateCommandBuffers(r->device, &alloc_info, r->command_buffers.data()));
 	record_command_buffers(r);
 }
 
 static void create_command_buffer_fences(fd_Render *r)
 {
-	r->command_buffer_fences = malloc(sizeof(VkFence) * r->ring_buffer_count);
+	r->command_buffer_fences.resize(r->ring_buffer_count);
 
 	VkFenceCreateInfo ci = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -846,20 +838,19 @@ static VkShaderModule load_shader_module(VkDevice device, const char *path)
 	long size = ftell(f);
 	rewind(f);
 
-	void *code = malloc(size);
-	fread(code, size, 1, f);
+	auto code = std::vector<uint32_t>(size / sizeof(uint32_t));
+	fread(code.data(), size, 1, f);
 	fclose(f);
 
 	VkShaderModuleCreateInfo ci = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.codeSize = size,
-		.pCode = code,
+		.codeSize = size_t(size),
+		.pCode = code.data(),
 	};
 
 	VkShaderModule ret;
 	VK_CHECK(vkCreateShaderModule(device, &ci, NULL, &ret));
 
-	free(code);
 	return ret;
 }
 
@@ -1305,48 +1296,38 @@ static void destroy_swap_chain_objects(fd_Render *r)
 {
 	VK_DESTROY(vkDestroyPipeline, r->device, r->pipeline);
 
-	if (r->command_buffer_fences)
+	if (not r->command_buffer_fences.empty())
 	{
 		for (uint32_t i = 0; i < r->ring_buffer_count; i++)
 			vkDestroyFence(r->device, r->command_buffer_fences[i], NULL);
 
-		free(r->command_buffer_fences);
-		r->command_buffer_fences = NULL;
+		r->command_buffer_fences.clear();
 	}
 
-	if (r->command_buffers)
+	if (not r->command_buffers.empty())
 	{
 		//vkResetCommandPool(r->device, r->command_pool, 0);
-		vkFreeCommandBuffers(r->device, r->command_pool, r->ring_buffer_count, r->command_buffers);
+		vkFreeCommandBuffers(r->device, r->command_pool, r->ring_buffer_count, r->command_buffers.data());
 
-		free(r->command_buffers);
-		r->command_buffers = NULL;
+		r->command_buffers.clear();
 	}
 
-	if (r->framebuffers)
+	if (not r->framebuffers.empty())
 	{
 		for (uint32_t i = 0; i < r->image_count; i++)
 			vkDestroyFramebuffer(r->device, r->framebuffers[i], NULL);
 
-		free(r->framebuffers);
-		r->framebuffers = NULL;
+		r->framebuffers.clear();
 	}
 
 	VK_DESTROY(vkDestroyRenderPass, r->device, r->render_pass);
 
-	if (r->image_views)
+	if (not r->image_views.empty())
 	{
 		for (uint32_t i = 0; i < r->image_count; i++)
 			vkDestroyImageView(r->device, r->image_views[i], NULL);
 
-		free(r->image_views);
-		r->image_views = NULL;
-	}
-
-	if (r->images)
-	{
-		free(r->images);
-		r->images = NULL;
+		r->image_views.clear();
 	}
 }
 
@@ -1566,8 +1547,8 @@ int main(int argc, const char **args)
 		update(&render);
 		render_frame(&render);
 
-		glfwPollEvents();
-//		glfwWaitEvents(); // when debugging
+//		glfwPollEvents();
+		glfwWaitEvents(); // when debugging
 	}
 
 	destroy_vulkan_objects(&render);

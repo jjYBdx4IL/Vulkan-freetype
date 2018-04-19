@@ -348,8 +348,8 @@ bool fd_bezier2_line_is_intersecting(const vec2 bezier[3], const vec2 line0, con
 		xt0 = bezier2_component(x0, x1, x2, t0);
 		xt1 = bezier2_component(x0, x1, x2, t1);
 
-		return is_between(t0, 0, 1) && is_between(xt0, 0, l) ||
-			   is_between(t1, 0, 1) && is_between(xt1, 0, l);
+		return (is_between(t0, 0, 1) && is_between(xt0, 0, l)) ||
+			(is_between(t1, 0, 1) && is_between(xt1, 0, l));
 
 	default:
 		assert(false);

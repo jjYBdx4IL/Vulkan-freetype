@@ -6,10 +6,10 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include FT_BBOX_H 
+#include FT_BBOX_H
 #include FT_OUTLINE_H
 
-#define FT_CHECK(r) { FT_Error err = (r); assert(!err); } while (0)
+#define FT_CHECK(r) do { FT_Error err = (r); assert(!err); } while (0)
 
 #define FD_OUTLINE_MAX_POINTS (255 * 2)
 
@@ -50,3 +50,16 @@ void fd_outline_subdivide(fd_Outline *o);
 void fd_outline_destroy(fd_Outline *o);
 void fd_outline_cbox(fd_Outline *o, fd_Rect *cbox);
 void fd_outline_u16_points(fd_Outline *o, fd_Rect *cbox, fd_PointU16 *pout);
+
+#ifdef __cplusplus
+
+template <typename T>
+static inline void dyn_array_grow(T **data, uint32_t *capacity, size_t element_size)
+{
+	*capacity = *capacity ? *capacity * 2 : 8;
+	T * new_data = (T*) realloc(*data, *capacity * element_size);
+//	assert(new_data);
+	*data = new_data;
+}
+
+#endif
