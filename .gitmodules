@@ -1,3 +1,6 @@
 [submodule "wiki"]
 	path = wiki
 	url = https://bwoods@github.com/bwoods/Vulkan.wiki.git
+[submodule "glfw"]
+	path = glfw
+	url = https://github.com/glfw/glfw.git
