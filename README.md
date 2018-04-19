@@ -11,7 +11,7 @@
 
 ## Text Renderer
 
-This repository contains a text renderer based upon a [demo made by Dávid Kocsis](https://github.com/kocsis1david/font-demo), an explanation of how it works can be found [here](wiki/Text-Rendering.md).
+This repository contains a text renderer based upon a [demo made by Dávid Kocsis](https://github.com/kocsis1david/font-demo), an explanation of how it works can be found [here](https://github.com/bwoods/Vulkan/wiki/Text-Rendering).
 
 
 
