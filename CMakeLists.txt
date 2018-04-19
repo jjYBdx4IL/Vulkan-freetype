@@ -1,5 +1,5 @@
 project(Rendering CXX C)
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_CXX_STANDARD 17) # for all targets
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,7 +17,9 @@ add_subdirectory(glfw)
 add_executable(glfw_vulkan_test EXCLUDE_FROM_ALL glfw/tests/vulkan.c)
 target_link_libraries(glfw_vulkan_test glfw)
 
-
+include(FindFreetype)
+add_executable(lorem_ipsum renderer/main.c renderer/geometry.c renderer/outline.c renderer/geometry.h renderer/outline.h renderer/linmath.h)
+target_link_libraries(lorem_ipsum glfw Freetype::Freetype)
 
 
 
@@ -34,7 +36,11 @@ if (APPLE)
 	target_include_directories(MoltenVK INTERFACE $ENV{VULKAN_SDK}/macOS/include)
 	target_sources(MoltenVK INTERFACE $ENV{VULKAN_SDK}/macOS/include/vulkan/vulkan.h)
 	target_sources(MoltenVK INTERFACE $ENV{VULKAN_SDK}/macOS/include/vulkan/vulkan.hpp)
-	target_link_libraries(glfw_vulkan_test MoltenVK)
+
 	set_target_properties(glfw_vulkan_test PROPERTIES LINKER_LANGUAGE CXX)
+	target_link_libraries(glfw_vulkan_test MoltenVK)
+
+	set_target_properties(lorem_ipsum PROPERTIES LINKER_LANGUAGE CXX)
+	target_link_libraries(lorem_ipsum MoltenVK)
 endif()
 

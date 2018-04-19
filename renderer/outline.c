@@ -29,7 +29,7 @@ static inline void dyn_array_grow(void **data, uint32_t *capacity, size_t elemen
 static void add_outline_point(fd_Outline *o, vec2 point)
 {
 	if (o->point_capacity == o->num_of_points)
-		dyn_array_grow(&(void*)o->points, &o->point_capacity, sizeof(vec2));
+		dyn_array_grow((void**)&o->points, &o->point_capacity, sizeof(vec2));
 
 	memcpy(o->points[o->num_of_points], point, sizeof(vec2));
 	o->num_of_points++;
@@ -152,7 +152,7 @@ static uint32_t cell_add_range(uint32_t cell, uint32_t from, uint32_t to)
 		cell |= length;
 		return cell;
 	}
-	
+
 	if (length > 7)
 		return 0;
 
@@ -324,7 +324,7 @@ static bool for_each_wipcell_add_bezier(fd_Outline *o, fd_Outline *u, uint32_t i
 	uint32_t min_y = (uint32_t)((bezier_bbox.min_y - o->bbox.min_y) / outline_bbox_h * o->cell_count_y);
 	uint32_t max_x = (uint32_t)((bezier_bbox.max_x - o->bbox.min_x) / outline_bbox_w * o->cell_count_x);
 	uint32_t max_y = (uint32_t)((bezier_bbox.max_y - o->bbox.min_y) / outline_bbox_h * o->cell_count_y);
-	
+
 	if (max_x >= o->cell_count_x) max_x = o->cell_count_x - 1;
 	if (max_y >= o->cell_count_y) max_y = o->cell_count_y - 1;
 
