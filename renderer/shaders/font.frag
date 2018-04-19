@@ -98,8 +98,8 @@ void process_bezier2_loop(vec2 p, uint begin, uint end, inout float min_udist, i
 
 float cell_signed_dist(uint point_offset, uint cell, vec2 p)
 {
-	float min_udist = 1.0 / 0.0;
-	float v = -1.0 / 0.0;
+	float min_udist = intBitsToFloat(2139095039);
+	float v = -intBitsToFloat(2139095039);
 /*
 	uint len0 = cell & 3;
 	uint len1 = (cell >> 2) & 7;
