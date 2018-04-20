@@ -97,10 +97,10 @@ typedef struct fd_Render
 	VkExtent2D swapchain_extent;
 	uint32_t image_index;
 	uint32_t image_count;
-	std::vector<VkImage> images;
-	std::vector<VkImageView> image_views;
+	std::unique_ptr<VkImage[]> images;
+	std::unique_ptr<VkImageView[]> image_views;
 	VkRenderPass render_pass;
-	std::vector<VkFramebuffer> framebuffers;
+	std::unique_ptr<VkFramebuffer[]> framebuffers;
 	VkSemaphore image_available_semaphore;
 	VkSemaphore render_finished_semaphore;
 
@@ -111,8 +111,8 @@ typedef struct fd_Render
 	VkDeviceMemory instance_staging_buffer_memory;
 	VkBuffer instance_staging_buffer;
 	VkCommandPool command_pool;
-	std::vector<VkCommandBuffer> command_buffers;
-	std::vector<VkFence> command_buffer_fences;
+	std::unique_ptr<VkCommandBuffer[]> command_buffers;
+	std::unique_ptr<VkFence[]> command_buffer_fences;
 	VkDescriptorPool descriptor_pool;
 	VkDescriptorSet descriptor_set;
 	VkDescriptorSetLayout set_layout;
@@ -479,14 +479,14 @@ static void create_swap_chain(fd_Render *r)
 
 	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, NULL));
 
-	r->images.resize(r->image_count);
-	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, r->images.data()));
+	r->images = std::make_unique<VkImage[]>(r->image_count);
+	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->image_count, r->images.get()));
 }
 
 static void create_image_views(fd_Render *r)
 {
-	r->image_views.resize(r->image_count);
-	memset(r->image_views.data(), 0, sizeof(VkImageView) * r->image_count);
+	r->image_views = std::make_unique<VkImageView[]>(r->image_count);
+	memset(r->image_views.get(), 0, sizeof(VkImageView) * r->image_count);
 
 	for (uint32_t i = 0; i < r->image_count; i++)
 	{
@@ -559,8 +559,8 @@ static void create_render_pass(fd_Render *r)
 
 static void create_framebuffers(fd_Render *r)
 {
-	r->framebuffers.resize(r->image_count);
-	memset(r->framebuffers.data(), 0, sizeof(VkFramebuffer) * r->image_count);
+	r->framebuffers = std::make_unique<VkFramebuffer[]>(r->image_count);
+	memset(r->framebuffers.get(), 0, sizeof(VkFramebuffer) * r->image_count);
 
 	for (uint32_t i = 0; i < r->image_count; i++)
 	{
@@ -792,8 +792,8 @@ static void record_command_buffers(fd_Render *r)
 
 static void create_command_buffers(fd_Render *r)
 {
-	r->command_buffers.resize(r->ring_buffer_count);
-	memset(r->command_buffers.data(), 0, sizeof(VkCommandBuffer) * r->ring_buffer_count);
+	r->command_buffers = std::make_unique<VkCommandBuffer[]>(r->ring_buffer_count);
+	memset(r->command_buffers.get(), 0, sizeof(VkCommandBuffer) * r->ring_buffer_count);
 
 	VkCommandBufferAllocateInfo alloc_info = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -802,13 +802,13 @@ static void create_command_buffers(fd_Render *r)
 		.commandBufferCount = r->ring_buffer_count,
 	};
 
-	VK_CHECK(vkAllocateCommandBuffers(r->device, &alloc_info, r->command_buffers.data()));
+	VK_CHECK(vkAllocateCommandBuffers(r->device, &alloc_info, r->command_buffers.get()));
 	record_command_buffers(r);
 }
 
 static void create_command_buffer_fences(fd_Render *r)
 {
-	r->command_buffer_fences.resize(r->ring_buffer_count);
+	r->command_buffer_fences = std::make_unique<VkFence[]>(r->ring_buffer_count);
 
 	VkFenceCreateInfo ci = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -1296,39 +1296,22 @@ static void destroy_swap_chain_objects(fd_Render *r)
 {
 	VK_DESTROY(vkDestroyPipeline, r->device, r->pipeline);
 
-	if (not r->command_buffer_fences.empty())
-	{
+	if (r->command_buffer_fences)
 		for (uint32_t i = 0; i < r->ring_buffer_count; i++)
 			vkDestroyFence(r->device, r->command_buffer_fences[i], NULL);
 
-		r->command_buffer_fences.clear();
-	}
+	if (r->command_buffers)
+		vkFreeCommandBuffers(r->device, r->command_pool, r->ring_buffer_count, r->command_buffers.get());
 
-	if (not r->command_buffers.empty())
-	{
-		//vkResetCommandPool(r->device, r->command_pool, 0);
-		vkFreeCommandBuffers(r->device, r->command_pool, r->ring_buffer_count, r->command_buffers.data());
-
-		r->command_buffers.clear();
-	}
-
-	if (not r->framebuffers.empty())
-	{
+	if (r->framebuffers)
 		for (uint32_t i = 0; i < r->image_count; i++)
 			vkDestroyFramebuffer(r->device, r->framebuffers[i], NULL);
 
-		r->framebuffers.clear();
-	}
-
 	VK_DESTROY(vkDestroyRenderPass, r->device, r->render_pass);
 
-	if (not r->image_views.empty())
-	{
+	if (r->image_views)
 		for (uint32_t i = 0; i < r->image_count; i++)
 			vkDestroyImageView(r->device, r->image_views[i], NULL);
-
-		r->image_views.clear();
-	}
 }
 
 static void destroy_vulkan_objects(fd_Render *r)
