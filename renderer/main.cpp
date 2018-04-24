@@ -816,9 +816,7 @@ static void create_command_buffer_fences(fd_Render *r)
 	};
 
 	for (uint32_t i = 0; i < r->ring_buffer_count; i++)
-	{
 		VK_CHECK(vkCreateFence(r->device, &ci, NULL, &r->command_buffer_fences[i]));
-	}
 }
 
 static void create_semaphores(fd_Render *r)

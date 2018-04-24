@@ -17,9 +17,14 @@ add_subdirectory(glfw)
 add_executable(glfw_vulkan_test EXCLUDE_FROM_ALL glfw/tests/vulkan.c)
 target_link_libraries(glfw_vulkan_test glfw)
 
-include(FindFreetype)
-add_executable(lorem_ipsum renderer/main.cpp renderer/geometry.cpp renderer/outline.cpp renderer/geometry.h renderer/outline.h renderer/linmath.h)
-target_link_libraries(lorem_ipsum glfw Freetype::Freetype)
+
+set(CMAKE_DISABLE_FIND_PACKAGE_HarfBuzz TRUE) # we use the font vectors directly; HarfBuzz’s hinting is not used
+add_subdirectory(freetype₂)
+
+
+add_executable(lorem_ipsum renderer/main.cpp renderer/geometry.cpp renderer/outline.cpp)
+target_link_libraries(lorem_ipsum glfw freetype)
+target_include_directories(lorem_ipsum PRIVATE freetype₂/include)
 
 
 
