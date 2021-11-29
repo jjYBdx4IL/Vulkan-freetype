@@ -35,24 +35,26 @@ void main()
 {
     GlyphInfo gi = glyph_buffer.glyphs[in_glyph_index];
 
-    vec2 pos[4];
-	 pos[0] = vec2(in_rect.x, in_rect.y);
-	 pos[1] = vec2(in_rect.z, in_rect.y);
-	 pos[2] = vec2(in_rect.x, in_rect.w);
-	 pos[3] = vec2(in_rect.z, in_rect.w);
+    vec2 pos[4] = vec2[](
+        vec2(in_rect.x, in_rect.y),
+        vec2(in_rect.z, in_rect.y),
+        vec2(in_rect.x, in_rect.w),
+        vec2(in_rect.z, in_rect.w)
+    );
 
-    vec2 glyph_pos[4];
-    glyph_pos[0] = vec2(gi.bbox.x, gi.bbox.y);
-    glyph_pos[1] = vec2(gi.bbox.z, gi.bbox.y);
-    glyph_pos[2] = vec2(gi.bbox.x, gi.bbox.w);
-    glyph_pos[3] = vec2(gi.bbox.z, gi.bbox.w);
+    vec2 glyph_pos[4] = vec2[](
+        vec2(gi.bbox.x, gi.bbox.y),
+        vec2(gi.bbox.z, gi.bbox.y),
+        vec2(gi.bbox.x, gi.bbox.w),
+        vec2(gi.bbox.z, gi.bbox.w)
+    );
 
-    vec2 cell_coord[4];
-    cell_coord[0] = vec2(0,              0);
-    cell_coord[1] = vec2(gi.cell_info.z, 0);
-    cell_coord[2] = vec2(0,              gi.cell_info.w);
-    cell_coord[3] = vec2(gi.cell_info.z, gi.cell_info.w);
-
+    vec2 cell_coord[4] = vec2[](
+        vec2(0,              0),
+        vec2(gi.cell_info.z, 0),
+        vec2(0,              gi.cell_info.w),
+        vec2(gi.cell_info.z, gi.cell_info.w)
+    );
 
     gl_Position = vec4(pos[gl_VertexIndex], 0.0, 1.0);
     out_glyph_pos = glyph_pos[gl_VertexIndex];

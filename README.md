@@ -37,7 +37,7 @@ renderer([&] (VkDevice device, VkCommandBuffer command_buffer) {
 
 Text is rendered [directly](https://github.com/bwoods/Vulkan/wiki/Text-Rendering) from font outlines.
 
-- [x] “Lorem Ipsum” rendering
+- [x] “Lorem Ipsum” rendering (performance is primarily limited by CPU, no discernible GPU load)
 - [ ] Dynamic text rendering
 - [ ] Fallback font handling
 

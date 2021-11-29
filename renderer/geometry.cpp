@@ -1,6 +1,7 @@
 #include "geometry.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <algorithm>
 
 enum
 {
@@ -87,10 +88,10 @@ static inline bool is_point_inside_bbox_exclusive(const fd_Rect *bbox, const vec
 
 static bool is_intersection_in_line_segment(const vec2 p1, const  vec2 p2, const vec2 i)
 {
-	float px_min = min(p1[0], p2[0]);
-	float px_max = max(p1[0], p2[0]);
-	float py_min = min(p1[1], p2[1]);
-	float py_max = max(p1[1], p2[1]);
+	float px_min = std::min(p1[0], p2[0]);
+	float px_max = std::max(p1[0], p2[0]);
+	float py_min = std::min(p1[1], p2[1]);
+	float py_max = std::max(p1[1], p2[1]);
 
 	return is_between(i[0], px_min, px_max) && is_between(i[1], py_min, py_max);
 }
@@ -249,18 +250,18 @@ void fd_bezier2_bbox(const vec2 bezier[3], fd_Rect *bbox)
 	float tx = deriv[0][0] / (deriv[0][0] - deriv[1][0]);
 	float ty = deriv[0][1] / (deriv[0][1] - deriv[1][1]);
 
-	bbox->min_x = min(bezier[0][0], bezier[2][0]);
-	bbox->min_y = min(bezier[0][1], bezier[2][1]);
-	bbox->max_x = max(bezier[0][0], bezier[2][0]);
-	bbox->max_y = max(bezier[0][1], bezier[2][1]);
+	bbox->min_x = std::min(bezier[0][0], bezier[2][0]);
+	bbox->min_y = std::min(bezier[0][1], bezier[2][1]);
+	bbox->max_x = std::max(bezier[0][0], bezier[2][0]);
+	bbox->max_y = std::max(bezier[0][1], bezier[2][1]);
 
 	if (0.0f <= tx && tx <= 1.0f)
 	{
 		float x = bezier2_component(bezier[0][0], bezier[1][0], bezier[2][0], tx);
 
 		if (deriv[0][0] < deriv[1][0])
-			bbox->min_x = min(bbox->min_x, x);
-		else bbox->max_x = max(bbox->max_x, x);
+			bbox->min_x = std::min(bbox->min_x, x);
+		else bbox->max_x = std::max(bbox->max_x, x);
 	}
 
 	if (0.0f <= ty && ty <= 1.0f)
@@ -268,8 +269,8 @@ void fd_bezier2_bbox(const vec2 bezier[3], fd_Rect *bbox)
 		float y = bezier2_component(bezier[0][1], bezier[1][1], bezier[2][1], ty);
 
 		if (deriv[0][1] < deriv[1][1])
-			bbox->min_y = min(bbox->min_y, y);
-		else bbox->max_y = max(bbox->max_y, y);
+			bbox->min_y = std::min(bbox->min_y, y);
+		else bbox->max_y = std::max(bbox->max_y, y);
 	}
 }
 
@@ -348,8 +349,8 @@ bool fd_bezier2_line_is_intersecting(const vec2 bezier[3], const vec2 line0, con
 		xt0 = bezier2_component(x0, x1, x2, t0);
 		xt1 = bezier2_component(x0, x1, x2, t1);
 
-		return (is_between(t0, 0, 1) && is_between(xt0, 0, l)) ||
-			(is_between(t1, 0, 1) && is_between(xt1, 0, l));
+		return is_between(t0, 0, 1) && is_between(xt0, 0, l) ||
+			   is_between(t1, 0, 1) && is_between(xt1, 0, l);
 
 	default:
 		assert(false);
