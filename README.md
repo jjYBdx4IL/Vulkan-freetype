@@ -1,52 +1,23 @@
-# Vulkan Rendering 🌋 
+## Changes
 
-A minimally configurable wrapper around the creation of Vulkan rendering pipelines.
+Fixed stuff to make it work with MSVC 2019, Freetype 2.11.0, and Vulkan SDK 1.2.198.0.
 
-## API
-
-> Proposed: Work in Progress
-
-Much of Vulkan’s infamous [800+ lines of code to render a triangle](https://www.reddit.com/r/vulkan/comments/512jvs/does_it_really_take_800_to_1000_lines_of_code/) is hardware selection and configuration. The C++ API herein minimizes that boilerplate by allowing the programmer to just specify requirements. 
-
-The complete Vulkan API is available for rendering; it is not wrapped or simplified.
-
-##### Simple Example
-
-```cpp
-auto renderer = forge::renderer([ ] (auto& with) {
-   // ...
-});
-
-// the rendering loop is then just:
-renderer([&] (VkDevice device, VkCommandBuffer command_buffer) {
-	
-});
-```
-
-
-
-
-
-
-
-## Additional Features
-
-### Text
-
-> Text renderering is based upon a demo by [Dávid Kocsis](https://github.com/kocsis1david/font-demo)
+## Description
 
 Text is rendered [directly](https://github.com/bwoods/Vulkan/wiki/Text-Rendering) from font outlines.
 
-- [x] “Lorem Ipsum” rendering (performance is primarily limited by CPU, no discernible GPU load)
-- [ ] Dynamic text rendering
-- [ ] Fallback font handling
+You need to clone (checkout) the repository using the `--recurse-submodules` option.
 
-### Bezier
+## Performance
 
-As the text renderer is extracting Bezier curves from the fonts, directly rendering Bezier curves should be relatively easy to add.
+AMD Ryzen 5600X + GTX 1060: one CPU core at limit (90% of time spent in append_text() building the instance buffer from the raw text input string), GPU usage around 15% (debug mode). 600+ fps in debug mode, 4000+ fps in release mode.
 
-- [ ] bezier API
-- [ ] rectangle API
-- [ ] line API
-- [ ] [squircle](https://www.paintcodeapp.com/news/code-for-ios-7-rounded-rectangles) API
+## Conclusion
+
+Works, but is it worth the additional CPU and GPU load?
+
+## Sources
+
+* https://github.com/bwoods/Vulkan
+* Text renderering is based upon a demo by [Dávid Kocsis](https://github.com/kocsis1david/font-demo)
 
